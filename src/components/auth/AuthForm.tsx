@@ -104,7 +104,7 @@ export function AuthForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/maskot.png" alt="Mascot" className="h-24 w-24 rounded-full object-cover" />
+            <img src="/maskot.png" alt="Mascot" className="h-24 w-24 rounded-full object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
             English Learning Platform
