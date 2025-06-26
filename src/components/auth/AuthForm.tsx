@@ -87,9 +87,13 @@ export function AuthForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
+<<<<<<< HEAD
             <div className="p-3 flex items-center justify-center">
               <img src={mascotImage} alt="Mascot" className="h-32 w-32" />
             </div>
+=======
+            <img src="/maskot.png" alt="Mascot" className="h-24 w-24 rounded-full object-contain" />
+>>>>>>> cfff62cefee06d6fc0301da79b0cbe0e9db7a450
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
             English Learning Platform

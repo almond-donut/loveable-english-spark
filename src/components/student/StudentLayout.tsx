@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -40,7 +41,11 @@ export function StudentLayout({ children, currentPage, onPageChange, sidebarOpen
   ];
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 dark:from-slate-900 dark:to-gray-900 flex">
+=======
+    <div className="min-h-screen flex flex-row w-full bg-background">
+>>>>>>> cfff62cefee06d6fc0301da79b0cbe0e9db7a450
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -51,8 +56,14 @@ export function StudentLayout({ children, currentPage, onPageChange, sidebarOpen
 
       {/* Sidebar */}
       <div
+        aria-label="Sidebar"
         className={cn(
+<<<<<<< HEAD
           'fixed inset-y-0 left-0 z-50 w-64 bg-card shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+=======
+          // Use fixed positioning on mobile and switch to relative on desktop like TeacherLayout
+          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0',
+>>>>>>> cfff62cefee06d6fc0301da79b0cbe0e9db7a450
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -113,9 +124,15 @@ export function StudentLayout({ children, currentPage, onPageChange, sidebarOpen
       </div>
 
       {/* Main content */}
+<<<<<<< HEAD
       <div className="flex-1 flex flex-col">
         {/* Top bar */}
         <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm shadow-sm border-b border-border">
+=======
+      <div className="flex-1 flex flex-col min-h-screen ml-0 lg:ml-64">
+        {/* Top bar */}
+        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200 flex-shrink-0">
+>>>>>>> cfff62cefee06d6fc0301da79b0cbe0e9db7a450
           <div className="flex items-center justify-between h-16 px-6">
             <Button
               variant="ghost"
@@ -127,13 +144,23 @@ export function StudentLayout({ children, currentPage, onPageChange, sidebarOpen
             </Button>
             <div className="flex-1"></div>
             <div className="flex items-center gap-4">
+<<<<<<< HEAD
+=======
+              <h2 className="text-lg font-semibold text-gray-900 capitalize">
+                {currentPage}
+              </h2>
+>>>>>>> cfff62cefee06d6fc0301da79b0cbe0e9db7a450
               <ThemeToggle />
             </div>
           </div>
         </div>
 
         {/* Page content */}
+<<<<<<< HEAD
         <main className="p-6 flex-1">
+=======
+        <main className="p-6 flex-1 overflow-y-auto">
+>>>>>>> cfff62cefee06d6fc0301da79b0cbe0e9db7a450
           {children}
         </main>
       </div>

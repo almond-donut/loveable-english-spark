@@ -398,7 +398,7 @@ export default function QuizManagement() {
               </div>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-                <Button type="submit">Update Quiz</Button>
+                <Button type="submit">Save Changes</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -409,12 +409,12 @@ export default function QuizManagement() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the quiz and all associated questions.
+                This action cannot be undone. This will permanently delete the quiz "{quizToDelete?.title}" and all of its associated questions and student progress.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setQuizToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteQuiz}>Delete</AlertDialogAction>
+              <Button onClick={handleDeleteQuiz} variant="destructive">Delete</Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
