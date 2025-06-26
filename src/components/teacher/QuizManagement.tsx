@@ -4,129 +4,71 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, FileText, Clock, Award, Edit, Trash2, Sparkles, BookOpen, GraduationCap, MessageCircle, Timer, Zap, Star, Target } from 'lucide-react';
+import { Plus, FileText, Clock, Award, Edit, Trash2, Sparkles, Loader2, Settings } from 'lucide-react';
 import { QuestionManager } from './QuestionManager';
+// import { QuizGenerator } from './QuizGenerator';
 
+// Interface untuk objek Kuis
 interface Quiz {
   id: string;
   title: string;
   description: string;
-  difficulty: 'easy' | 'medium' | 'hard';
   time_limit: number;
   points_per_question: number;
-  teacher_id?: string;
   created_by?: string;
-  status?: string;
   created_at: string;
-  updated_at?: string;
-  questionCount?: number;
+  questionCount: number; // Selalu ada, dihitung dari fetch
+  difficulty: 'easy' | 'medium' | 'hard' | 'mixed';
 }
 
-export function QuizManagement() {
+// State untuk form kuis
+interface QuizFormState {
+  title: string;
+  description: string;
+  time_limit: number;
+  points_per_question: number;
+}
+
+export default function QuizManagement() {
   const { profileId } = useAuth();
   const { toast } = useToast();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+
+  // State untuk dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    // const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+
+  // State untuk form dan aksi
+  const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
   const [quizToDelete, setQuizToDelete] = useState<Quiz | null>(null);
-  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
-  const [quizForm, setQuizForm] = useState({
+  const [quizForm, setQuizForm] = useState<QuizFormState>({
     title: '',
     description: '',
-    difficulty: 'medium' as 'easy' | 'medium' | 'hard',
-    timeLimit: 600,
-    pointsPerQuestion: 10,
+    time_limit: 600,
+    points_per_question: 10,
   });
 
-  // Template quiz data dengan kategori difficulty dan timer menarik
-  const quizTemplates = [
-    {
-      title: 'Greeting Basics',
-      description: 'Master the fundamental greetings in English',
-      difficulty: 'easy' as const,
-      timeLimit: 300,
-      pointsPerQuestion: 10,
-      category: 'Communication',
-      icon: MessageCircle,
-      color: 'bg-green-100 border-green-200 text-green-800',
-      badgeColor: 'bg-green-500',
-      questions: [
-        {
-          question: 'How do you greet someone in the morning?',
-          options: ['Good morning', 'Good night', 'Good evening', 'Goodbye'],
-          correct: 'Good morning'
-        }
-      ]
-    },
-    {
-      title: 'Daily Vocabulary',
-      description: 'Essential words for everyday conversations',
-      difficulty: 'medium' as const,
-      timeLimit: 600,
-      pointsPerQuestion: 15,
-      category: 'Vocabulary',
-      icon: BookOpen,
-      color: 'bg-blue-100 border-blue-200 text-blue-800',
-      badgeColor: 'bg-blue-500',
-      questions: [
-        {
-          question: 'What do you call the first meal of the day?',
-          options: ['Dinner', 'Lunch', 'Breakfast', 'Snack'],
-          correct: 'Breakfast'
-        }
-      ]
-    },
-    {
-      title: 'Business English',
-      description: 'Professional communication skills',
-      difficulty: 'hard' as const,
-      timeLimit: 900,
-      pointsPerQuestion: 20,
-      category: 'Professional',
-      icon: GraduationCap,
-      color: 'bg-red-100 border-red-200 text-red-800',
-      badgeColor: 'bg-red-500',
-      questions: [
-        {
-          question: 'How do you start a formal business meeting?',
-          options: ['Hi everyone', 'Good morning, shall we begin?', 'Hey guys', 'Let\'s start'],
-          correct: 'Good morning, shall we begin?'
-        }
-      ]
-    }
-  ];
-
-  const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (minutes === 0) return `${remainingSeconds}s`;
-    if (remainingSeconds === 0) return `${minutes}m`;
-    return `${minutes}m ${remainingSeconds}s`;
-  };
-
-  const getDifficultyIcon = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
-        return <Zap className="h-4 w-4 text-green-500" />;
-      case 'medium':
-        return <Target className="h-4 w-4 text-yellow-500" />;
-      case 'hard':
-        return <Star className="h-4 w-4 text-red-500" />;
-      default:
-        return <Target className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
+  // Ambil kuis saat komponen dimuat jika profileId tersedia
   useEffect(() => {
     if (profileId) {
       fetchQuizzes();
@@ -134,45 +76,43 @@ export function QuizManagement() {
   }, [profileId]);
 
   const fetchQuizzes = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      console.log('🔍 Fetching quizzes for teacher:', profileId);
-      
-      const response = await (supabase as any)
+      const { data, error } = await supabase
         .from('quizzes')
-        .select('*')
+        .select(`*, questions(id, difficulty)`)
         .eq('created_by', profileId)
         .order('created_at', { ascending: false });
 
-      if (response.error) {
-        console.error('❌ Fetch error:', response.error);
-        throw response.error;
-      }
+      if (error) throw error;
 
-      const quizData = response.data || [];
-      console.log('📚 Teacher quizzes:', quizData);
-      
-      // Get question counts for each quiz
-      const quizzesWithCounts = await Promise.all(
-        quizData.map(async (quiz: any) => {
-          const { count } = await (supabase as any)
-            .from('questions')
-            .select('*', { count: 'exact' })
-            .eq('quiz_id', quiz.id);
-          
-          return {
-            ...quiz,
-            questionCount: count || 0
-          };
-        })
-      );
-      
-      setQuizzes(quizzesWithCounts);
+      const quizzesWithCalculatedData = data.map((quiz: any): Quiz => {
+        const questions = quiz.questions || [];
+        const questionCount = questions.length;
+        let difficulty: 'easy' | 'medium' | 'hard' | 'mixed' = 'easy'; // Default
+
+        if (questionCount > 0) {
+          const uniqueDifficulties = new Set(questions.map((q: { difficulty: string }) => q.difficulty));
+          if (uniqueDifficulties.size > 1) {
+            difficulty = 'mixed';
+          } else {
+            // Ambil kesulitan dari satu-satunya jenis pertanyaan yang ada
+            difficulty = uniqueDifficulties.values().next().value || 'easy';
+          }
+        }
+        
+        return {
+          ...quiz,
+          questionCount: questionCount,
+          difficulty: difficulty,
+        };
+      });
+
+      setQuizzes(quizzesWithCalculatedData);
     } catch (error: any) {
-      console.error('❌ Quiz fetch error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to fetch quizzes',
+        title: 'Error Fetching Quizzes',
+        description: error.message,
         variant: 'destructive',
       });
     } finally {
@@ -184,154 +124,72 @@ export function QuizManagement() {
     setQuizForm({
       title: '',
       description: '',
-      difficulty: 'medium',
-      timeLimit: 600,
-      pointsPerQuestion: 10,
+      time_limit: 600,
+      points_per_question: 10,
     });
   };
 
-  const handleTemplateSelect = (template: any) => {
-    setQuizForm({
-      title: template.title,
-      description: template.description,
-      difficulty: template.difficulty,
-      timeLimit: template.timeLimit,
-      pointsPerQuestion: template.pointsPerQuestion,
-    });
-    toast({
-      title: '🌟 Template Selected!',
-      description: `${template.title} template loaded successfully`,
-    });
-  };
-
+  // --- Handler CRUD ---
   const handleCreateQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
-      console.log('🎯 Creating quiz basic (no questions yet):', quizForm);
-      
-      const { data: quiz, error: quizError } = await supabase
+      const { data, error } = await supabase
         .from('quizzes')
-        .insert({
-          title: quizForm.title,
-          description: quizForm.description,
-          difficulty: quizForm.difficulty,
-          time_limit: quizForm.timeLimit,
-          points_per_question: quizForm.pointsPerQuestion,
-          created_by: profileId,
-        })
+        .insert({ ...quizForm, created_by: profileId })
         .select()
         .single();
 
-      if (quizError) throw quizError;
+      if (error) throw error;
 
-      console.log('✅ Quiz created successfully:', quiz);
-
-      toast({
-        title: 'Success',
-        description: 'Quiz created successfully! You can add questions later.',
-      });
-
+      toast({ title: 'Success', description: `Quiz "${data.title}" created.` });
       setIsCreateDialogOpen(false);
-      resetForm();
-      fetchQuizzes();
+      fetchQuizzes(); // Refresh list
     } catch (error: any) {
-      console.error('❌ Create quiz error:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create quiz',
-        variant: 'destructive',
-      });
+      toast({ title: 'Creation Failed', description: error.message, variant: 'destructive' });
     }
   };
 
   const handleEditQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!currentQuiz) return;
-    
     try {
-      console.log('✏️ Updating quiz:', currentQuiz.id, quizForm);
-      
-      const { data: quiz, error: quizError } = await supabase
+      const { data, error } = await supabase
         .from('quizzes')
-        .update({
-          title: quizForm.title,
-          description: quizForm.description,
-          difficulty: quizForm.difficulty,
-          time_limit: quizForm.timeLimit,
-          points_per_question: quizForm.pointsPerQuestion,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ ...quizForm, updated_at: new Date().toISOString() })
         .eq('id', currentQuiz.id)
         .select()
         .single();
 
-      if (quizError) throw quizError;
+      if (error) throw error;
 
-      console.log('✅ Quiz updated successfully:', quiz);
-
-      toast({
-        title: 'Success',
-        description: 'Quiz updated successfully!',
-      });
-
+      toast({ title: 'Success', description: `Quiz "${data.title}" updated.` });
       setIsEditDialogOpen(false);
-      setCurrentQuiz(null);
-      resetForm();
-      fetchQuizzes();
+      fetchQuizzes(); // Refresh list
     } catch (error: any) {
-      console.error('❌ Update quiz error:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update quiz',
-        variant: 'destructive',
-      });
+      toast({ title: 'Update Failed', description: error.message, variant: 'destructive' });
     }
   };
 
   const handleDeleteQuiz = async () => {
     if (!quizToDelete) return;
-    
     try {
-      console.log('🗑️ Deleting quiz:', quizToDelete.id);
-      
-      // Delete questions first (cascade delete)
-      const { error: questionsError } = await supabase
-        .from('questions')
-        .delete()
-        .eq('quiz_id', quizToDelete.id);
+      // Cascade delete ditangani oleh constraint foreign key di database
+      const { error } = await supabase.from('quizzes').delete().eq('id', quizToDelete.id);
+      if (error) throw error;
 
-      if (questionsError) {
-        console.warn('⚠️ Questions delete warning:', questionsError);
-      }
-
-      // Delete quiz
-      const { error: quizError } = await supabase
-        .from('quizzes')
-        .delete()
-        .eq('id', quizToDelete.id);
-
-      if (quizError) throw quizError;
-
-      console.log('✅ Quiz deleted successfully');
-
-      toast({
-        title: 'Success',
-        description: 'Quiz deleted successfully!',
-      });
-
+      toast({ title: 'Success', description: `Quiz "${quizToDelete.title}" deleted.` });
       setIsDeleteConfirmOpen(false);
       setQuizToDelete(null);
-      fetchQuizzes();
+      fetchQuizzes(); // Refresh list
     } catch (error: any) {
-      console.error('❌ Delete quiz error:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to delete quiz',
-        variant: 'destructive',
-      });
+      toast({ title: 'Deletion Failed', description: error.message, variant: 'destructive' });
     }
+  };
+
+  // --- Pembuka Dialog ---
+  const openCreateDialog = () => {
+    resetForm();
+    setIsCreateDialogOpen(true);
   };
 
   const openEditDialog = (quiz: Quiz) => {
@@ -339,9 +197,8 @@ export function QuizManagement() {
     setQuizForm({
       title: quiz.title,
       description: quiz.description,
-      difficulty: quiz.difficulty,
-      timeLimit: quiz.time_limit,
-      pointsPerQuestion: quiz.points_per_question,
+      time_limit: quiz.time_limit,
+      points_per_question: quiz.points_per_question,
     });
     setIsEditDialogOpen(true);
   };
@@ -351,390 +208,217 @@ export function QuizManagement() {
     setIsDeleteConfirmOpen(true);
   };
 
-  const closeCreateDialog = () => {
-    setIsCreateDialogOpen(false);
-    resetForm();
+  // --- Helper Functions ---
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes === 0) return `${remainingSeconds}s`;
+    if (remainingSeconds === 0) return `${minutes}m`;
+    return `${minutes}m ${remainingSeconds}s`;
   };
 
-  const closeEditDialog = () => {
-    setIsEditDialogOpen(false);
-    setCurrentQuiz(null);
-    resetForm();
+  const getDifficultyColor = (difficulty: 'easy' | 'medium' | 'hard' | 'mixed'): string => {
+    switch (difficulty) {
+      case 'easy': return 'bg-green-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'hard': return 'bg-red-500';
+      case 'mixed': return 'bg-purple-500';
+      default: return 'bg-gray-500';
+    }
   };
+
+  // --- Render ---
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4 text-lg">Loading your quizzes...</p>
+      </div>
+    );
+  }
 
   if (selectedQuizId) {
     return (
-      <QuestionManager
-        quizId={selectedQuizId}
+      <QuestionManager 
+        quizId={selectedQuizId} 
         onBack={() => setSelectedQuizId(null)}
+        teacherId={profileId!} 
       />
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quiz Management</h1>
-          <p className="text-gray-600">Create and manage your English quizzes</p>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Create Quiz
+    <TooltipProvider>
+      <div className="p-4 sm:p-6 lg:p-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">My Quizzes</h1>
+            <p className="mt-1 text-muted-foreground">
+              Create, manage, and track your quizzes all in one place.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button onClick={openCreateDialog}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Quiz
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          </div>
+        </div>
+
+        {/* Content Area */}
+        {quizzes.length === 0 ? (
+          // Empty State
+          <div className="flex flex-col items-center justify-center text-center p-12 border-2 border-dashed rounded-lg mt-8">
+            <FileText className="h-16 w-16 text-muted-foreground" />
+            <h2 className="mt-6 text-2xl font-semibold">No Quizzes Yet</h2>
+            <p className="mt-2 mb-6 text-muted-foreground">
+              It looks like you haven't created any quizzes. Get started now!
+            </p>
+            <Button onClick={openCreateDialog} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Create Your First Quiz
+            </Button>
+          </div>
+        ) : (
+          // Quiz Grid
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {quizzes.map((quiz) => (
+              <Card key={quiz.id} className="flex flex-col shadow-md hover:shadow-xl transition-shadow duration-300 rounded-lg overflow-hidden bg-card">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <CardTitle className="text-lg font-semibold truncate" title={quiz.title}>{quiz.title}</CardTitle>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge variant="outline" className={`${getDifficultyColor(quiz.difficulty)} text-white border-0`}>{quiz.difficulty}</Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Difficulty Level</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <CardDescription className="h-10 text-sm line-clamp-2">{quiz.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow pt-2">
+                  <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1" title="Number of Questions"><FileText className="h-3 w-3" /> {quiz.questionCount} Qs</div>
+                    <div className="flex items-center gap-1" title="Time Limit"><Clock className="h-3 w-3" /> {formatTime(quiz.time_limit)}</div>
+                    <div className="flex items-center gap-1" title="Points per Question"><Award className="h-3 w-3" /> {quiz.points_per_question} pts</div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between items-center pt-4 mt-auto bg-muted/30 px-4 py-2">
+                  <div className="flex items-center space-x-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="default" size="sm" className="!bg-black !text-white !border !border-black hover:!bg-gray-900 focus:!ring-2 focus:!ring-black focus:!ring-offset-2 shadow-lg" onClick={() => setSelectedQuizId(quiz.id)}>
+                          Kelola Soal
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Kelola soal untuk kuis ini</p></TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(quiz)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Edit Quiz Details</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(quiz)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Delete Quiz</p></TooltipContent>
+                    </Tooltip>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Dialogs */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Quiz</DialogTitle>
+              <DialogDescription>Fill in the details for your new quiz.</DialogDescription>
             </DialogHeader>
-            
-            {/* Quick Templates Section */}
-            <div className="space-y-4">
+            <form onSubmit={handleCreateQuiz} className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-yellow-500" />
-                  Quick Templates
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {quizTemplates.map((template, index) => (
-                    <Card 
-                      key={index} 
-                      className={`cursor-pointer transition-all hover:shadow-md border-2 hover:border-blue-300 ${template.color}`}
-                      onClick={() => handleTemplateSelect(template)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <template.icon className="h-5 w-5" />
-                            <h4 className="font-medium text-sm">{template.title}</h4>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {getDifficultyIcon(template.difficulty)}
-                            <Badge variant="secondary" className={`text-xs ${template.badgeColor} text-white`}>
-                              {template.difficulty}
-                            </Badge>
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-600 mb-2">{template.description}</p>
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            <span>{formatTime(template.timeLimit)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Award className="h-3 w-3" />
-                            <span>{template.pointsPerQuestion}pts</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <Label htmlFor="title">Title</Label>
+                <Input id="title" value={quizForm.title} onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })} required />
               </div>
-
-              {/* Custom Quiz Form */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Custom Quiz Details</h3>
-                <form onSubmit={handleCreateQuiz} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="title">Quiz Title</Label>
-                      <Input
-                        id="title"
-                        value={quizForm.title}
-                        onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })}
-                        placeholder="Enter quiz title"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="difficulty">Difficulty Level</Label>
-                      <Select
-                        value={quizForm.difficulty}
-                        onValueChange={(value: 'easy' | 'medium' | 'hard') =>
-                          setQuizForm({ ...quizForm, difficulty: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <div className="flex items-center gap-2">
-                            {getDifficultyIcon(quizForm.difficulty)}
-                            <SelectValue />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="easy">
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-4 w-4 text-green-500" />
-                              Easy
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="medium">
-                            <div className="flex items-center gap-2">
-                              <Target className="h-4 w-4 text-yellow-500" />
-                              Medium
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="hard">
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-red-500" />
-                              Hard
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={quizForm.description}
-                      onChange={(e) => setQuizForm({ ...quizForm, description: e.target.value })}
-                      placeholder="Describe what this quiz covers"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="timeLimit">Time Limit (seconds)</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="timeLimit"
-                          type="number"
-                          value={quizForm.timeLimit}
-                          onChange={(e) => setQuizForm({ ...quizForm, timeLimit: parseInt(e.target.value) })}
-                          min={60}
-                          max={3600}
-                        />
-                        <div className="flex items-center gap-1 text-sm text-gray-500 whitespace-nowrap">
-                          <Timer className="h-4 w-4" />
-                          Timer: {formatTime(quizForm.timeLimit)}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="pointsPerQuestion">Points per Question</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="pointsPerQuestion"
-                          type="number"
-                          value={quizForm.pointsPerQuestion}
-                          onChange={(e) => setQuizForm({ ...quizForm, pointsPerQuestion: parseInt(e.target.value) })}
-                          min={1}
-                          max={100}
-                        />
-                        <div className="flex items-center gap-1 text-sm text-gray-500 whitespace-nowrap">
-                          <Award className="h-4 w-4" />
-                          {quizForm.pointsPerQuestion}pts
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={resetForm}>
-                      Reset
-                    </Button>
-                    <Button type="button" variant="outline" onClick={closeCreateDialog}>
-                      Cancel
-                    </Button>
-                    <Button type="submit">Create Quiz</Button>
-                  </div>
-                </form>
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" value={quizForm.description} onChange={(e) => setQuizForm({ ...quizForm, description: e.target.value })} />
               </div>
-            </div>
+              <div>
+                <Label htmlFor="time_limit">Time Limit (seconds)</Label>
+                <Input id="time_limit" type="number" value={quizForm.time_limit} onChange={(e) => setQuizForm({ ...quizForm, time_limit: parseInt(e.target.value, 10) })} required />
+              </div>
+              <div>
+                <Label htmlFor="points_per_question">Points per Question</Label>
+                <Input id="points_per_question" type="number" value={quizForm.points_per_question} onChange={(e) => setQuizForm({ ...quizForm, points_per_question: parseInt(e.target.value, 10) })} required />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Create Quiz</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Quiz</DialogTitle>
+              <DialogDescription>Update the details for "{currentQuiz?.title}".</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditQuiz} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-title">Title</Label>
+                <Input id="edit-title" value={quizForm.title} onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })} required />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea id="edit-description" value={quizForm.description} onChange={(e) => setQuizForm({ ...quizForm, description: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="edit-time_limit">Time Limit (seconds)</Label>
+                <Input id="edit-time_limit" type="number" value={quizForm.time_limit} onChange={(e) => setQuizForm({ ...quizForm, time_limit: parseInt(e.target.value, 10) })} required />
+              </div>
+              <div>
+                <Label htmlFor="edit-points_per_question">Points per Question</Label>
+                <Input id="edit-points_per_question" type="number" value={quizForm.points_per_question} onChange={(e) => setQuizForm({ ...quizForm, points_per_question: parseInt(e.target.value, 10) })} required />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the quiz "{quizToDelete?.title}" and all of its associated questions and student progress.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setQuizToDelete(null)}>Cancel</AlertDialogCancel>
+              <Button onClick={handleDeleteQuiz} variant="destructive">Delete</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      {/* Quiz List */}
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading quizzes...</p>
-        </div>
-      ) : quizzes.length === 0 ? (
-        <Card className="p-8 text-center">
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No quizzes yet</h3>
-          <p className="text-gray-600 mb-4">Create your first quiz to get started!</p>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Quiz
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quizzes.map((quiz) => (
-            <Card key={quiz.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{quiz.title}</CardTitle>
-                    <CardDescription className="mt-1">{quiz.description}</CardDescription>
-                  </div>
-                  <div className="flex items-center gap-1 ml-2">
-                    {getDifficultyIcon(quiz.difficulty)}
-                    <Badge 
-                      variant={quiz.difficulty === 'easy' ? 'default' : quiz.difficulty === 'medium' ? 'secondary' : 'destructive'}
-                      className="capitalize"
-                    >
-                      {quiz.difficulty}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{formatTime(quiz.time_limit)}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Award className="h-4 w-4" />
-                      <span>{quiz.points_per_question} pts</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Questions: {quiz.questionCount || 0}</span>
-                    <span className="text-gray-500">
-                      {new Date(quiz.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setSelectedQuizId(quiz.id)}
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      Kelola Soal
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditDialog(quiz)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openDeleteDialog(quiz)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Quiz</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEditQuiz} className="space-y-4">
-            <div>
-              <Label htmlFor="edit-title">Quiz Title</Label>
-              <Input
-                id="edit-title"
-                value={quizForm.title}
-                onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={quizForm.description}
-                onChange={(e) => setQuizForm({ ...quizForm, description: e.target.value })}
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-difficulty">Difficulty</Label>
-                <Select
-                  value={quizForm.difficulty}
-                  onValueChange={(value: 'easy' | 'medium' | 'hard') =>
-                    setQuizForm({ ...quizForm, difficulty: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-timeLimit">Time Limit (seconds)</Label>
-                <Input
-                  id="edit-timeLimit"
-                  type="number"
-                  value={quizForm.timeLimit}
-                  onChange={(e) => setQuizForm({ ...quizForm, timeLimit: parseInt(e.target.value) })}
-                  min={60}
-                  max={3600}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="edit-pointsPerQuestion">Points per Question</Label>
-              <Input
-                id="edit-pointsPerQuestion"
-                type="number"
-                value={quizForm.pointsPerQuestion}
-                onChange={(e) => setQuizForm({ ...quizForm, pointsPerQuestion: parseInt(e.target.value) })}
-                min={1}
-                max={100}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={closeEditDialog}>
-                Cancel
-              </Button>
-              <Button type="submit">Update Quiz</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the quiz "{quizToDelete?.title}" and all its questions.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteQuiz} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </TooltipProvider>
   );
 }

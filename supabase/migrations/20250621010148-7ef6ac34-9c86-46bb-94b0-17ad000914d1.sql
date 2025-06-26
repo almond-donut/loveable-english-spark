@@ -67,11 +67,13 @@ CREATE TABLE questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL,
+  question_type VARCHAR NOT NULL DEFAULT 'multiple_choice',
   option_a VARCHAR NOT NULL,
   option_b VARCHAR NOT NULL,
   option_c VARCHAR NOT NULL,
   option_d VARCHAR NOT NULL,
   correct_answer VARCHAR NOT NULL CHECK (correct_answer IN ('A', 'B', 'C', 'D')),
+  difficulty difficulty_level DEFAULT 'medium',
   points INTEGER DEFAULT 10,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

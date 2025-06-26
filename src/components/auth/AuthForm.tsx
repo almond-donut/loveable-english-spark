@@ -104,15 +104,13 @@ export function AuthForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-blue-600 p-3 rounded-full">
-              <BookOpen className="h-8 w-8 text-white" />
-            </div>
+            <img src="/maskot.png" alt="Mascot" className="h-24 w-24 rounded-full object-cover" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
             English Learning Platform
           </CardTitle>
           <CardDescription>
-            Gamified learning for SMK students and teachers
+            Gamified learning for SMK Wiworotomo
           </CardDescription>
         </CardHeader>
         <CardContent>

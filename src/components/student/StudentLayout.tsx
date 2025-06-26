@@ -16,6 +16,7 @@ import {
   Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -36,7 +37,7 @@ export function StudentLayout({ children, currentPage, onPageChange }: StudentLa
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+    <div className="min-h-screen flex flex-row w-full bg-background">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -47,8 +48,10 @@ export function StudentLayout({ children, currentPage, onPageChange }: StudentLa
 
       {/* Sidebar */}
       <div
+        aria-label="Sidebar"
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+          // Use fixed positioning on mobile and switch to relative on desktop like TeacherLayout
+          'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -108,9 +111,9 @@ export function StudentLayout({ children, currentPage, onPageChange }: StudentLa
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="flex-1 flex flex-col min-h-screen ml-0 lg:ml-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
+        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between h-16 px-6">
             <Button
               variant="ghost"
@@ -124,12 +127,13 @@ export function StudentLayout({ children, currentPage, onPageChange }: StudentLa
               <h2 className="text-lg font-semibold text-gray-900 capitalize">
                 {currentPage}
               </h2>
+              <ThemeToggle />
             </div>
           </div>
         </div>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="p-6 flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
